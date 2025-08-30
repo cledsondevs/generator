@@ -16,7 +16,7 @@ app.use(express.json());
 // Servir arquivos PDF estaticamente
 app.use('/pdfs', express.static('/opt/generator'));
 
-const genAI = new GoogleGenerativeAI("AIzaSyDO0bmwQnYPev_23DCPNOySK7sFdz_kBsc");
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 app.post('/generate-presentation', async (req, res) => {
   try {

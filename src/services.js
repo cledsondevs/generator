@@ -42,7 +42,7 @@ export async function generateSlides(genAI, prompt, slideCount = 3) {
 
 export async function generateImages(genAI, slides) {
   const openai = new OpenAI({
-    apiKey: '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'
+    apiKey: process.env.OPENAI_API_KEY
   });
 
   const slidesWithImages = [];
