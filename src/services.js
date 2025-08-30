@@ -70,6 +70,7 @@ export async function generateImages(genAI, slides) {
 export async function generatePDF(slidesData) {
   const browser = await puppeteer.launch({
     headless: true,
+    executablePath: '/usr/bin/google-chrome',
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -78,7 +79,13 @@ export async function generatePDF(slidesData) {
       '--no-first-run',
       '--no-zygote',
       '--single-process',
-      '--disable-gpu'
+      '--disable-gpu',
+      '--disable-background-timer-throttling',
+      '--disable-backgrounding-occluded-windows',
+      '--disable-renderer-backgrounding',
+      '--disable-web-security',
+      '--disable-features=TranslateUI',
+      '--disable-ipc-flooding-protection'
     ]
   });
   const page = await browser.newPage();
