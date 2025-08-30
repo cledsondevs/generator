@@ -5,14 +5,14 @@ import os from 'os';
 
 export async function generateSlides(genAI, prompt, slideCount = 3) {
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-  
+
   const slidePrompt = `
     Baseado no prompt: "${prompt}"
     
     Gere exatamente ${slideCount} slides para uma apresentação. Retorne apenas um JSON válido no formato:
     {
       "slides": [
-        ${Array.from({length: slideCount}, (_, i) => `
+        ${Array.from({ length: slideCount }, (_, i) => `
         {
           "title": "Título do Slide ${i + 1}",
           "content": "Conteúdo detalhado do slide ${i + 1}"
@@ -30,7 +30,7 @@ export async function generateSlides(genAI, prompt, slideCount = 3) {
   const result = await model.generateContent(slidePrompt);
   const response = await result.response;
   const text = response.text();
-  
+
   try {
     return JSON.parse(text);
   } catch (error) {
@@ -41,16 +41,16 @@ export async function generateSlides(genAI, prompt, slideCount = 3) {
 
 export async function generateImages(genAI, slides) {
   const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
-  
+
   const slidesWithImages = [];
-  
+
   for (const slide of slides.slides) {
     const imagePrompt = `Crie uma imagem ilustrativa para um slide de apresentação com o título: "${slide.title}" e conteúdo: "${slide.content}". A imagem deve ser profissional e adequada para uma apresentação de negócios.`;
-    
+
     try {
       const result = await model.generateContent(imagePrompt);
       const response = await result.response;
-      
+
       slidesWithImages.push({
         ...slide,
         imageUrl: 'https://via.placeholder.com/800x600?text=' + encodeURIComponent(slide.title)
@@ -63,14 +63,14 @@ export async function generateImages(genAI, slides) {
       });
     }
   }
-  
+
   return { slides: slidesWithImages };
 }
 
 export async function generatePDF(slidesData) {
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
-  
+
   let htmlContent = `
     <!DOCTYPE html>
     <html>
@@ -157,11 +157,11 @@ export async function generatePDF(slidesData) {
   `;
 
   await page.setContent(htmlContent);
-  
-  const userDir = os.homedir();
+
+  const userDir = "/opt/generator/";
   const fileName = `apresentacao-${Date.now()}.pdf`;
   const pdfPath = path.join(userDir, fileName);
-  
+
   await page.pdf({
     path: pdfPath,
     format: 'A4',
