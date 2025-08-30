@@ -27,30 +27,51 @@ app.post('/generate-presentation', async (req, res) => {
     }
 
     const numberOfSlides = slideCount || 3;
-    const enableImages = shouldGenerateImages !== false; // true por padrão
+    const enableImages = shouldGenerateImages === undefined ? true : shouldGenerateImages;
+
+    console.log(`generateImages recebido: ${shouldGenerateImages}`);
+    console.log(`enableImages calculado: ${enableImages}`);
 
     if (numberOfSlides < 1 || numberOfSlides > 10) {
       return res.status(400).json({ error: 'Número de slides deve ser entre 1 e 10' });
     }
 
     const slides = await generateSlides(genAI, prompt, numberOfSlides);
-    const slidesWithImages = enableImages 
-      ? await generateImages(genAI, slides)
-      : slides;
-    const pdfPath = await generatePDF(slidesWithImages);
+    
+    if (enableImages) {
+      console.log('Gerando imagens...');
+      const slidesWithImages = await generateImages(genAI, slides);
+      const pdfPath = await generatePDF(slidesWithImages);
+      
+      // Extrair apenas o nome do arquivo para criar URL pública
+      const fileName = path.basename(pdfPath);
+      const publicUrl = `http://200.98.64.133:${port}/pdfs/${fileName}`;
 
-    // Extrair apenas o nome do arquivo para criar URL pública
-    const fileName = path.basename(pdfPath);
-    const publicUrl = `http://200.98.64.133:${port}/pdfs/${fileName}`;
+      res.json({
+        message: 'Apresentação gerada com sucesso',
+        pdfPath,
+        downloadUrl: publicUrl,
+        slides: slidesWithImages,
+        slideCount: numberOfSlides,
+        imagesGenerated: true
+      });
+    } else {
+      console.log('Pulando geração de imagens...');
+      const pdfPath = await generatePDF(slides);
+      
+      // Extrair apenas o nome do arquivo para criar URL pública
+      const fileName = path.basename(pdfPath);
+      const publicUrl = `http://200.98.64.133:${port}/pdfs/${fileName}`;
 
-    res.json({
-      message: 'Apresentação gerada com sucesso',
-      pdfPath,
-      downloadUrl: publicUrl,
-      slides: slidesWithImages,
-      slideCount: numberOfSlides,
-      imagesGenerated: enableImages
-    });
+      res.json({
+        message: 'Apresentação gerada com sucesso',
+        pdfPath,
+        downloadUrl: publicUrl,
+        slides: slides,
+        slideCount: numberOfSlides,
+        imagesGenerated: false
+      });
+    }
 
   } catch (error) {
     console.error('Erro ao gerar apresentação:', error);
