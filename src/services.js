@@ -2,6 +2,7 @@ import puppeteer from 'puppeteer';
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
+import OpenAI from 'openai';
 
 export async function generateSlides(genAI, prompt, slideCount = 3) {
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
@@ -40,26 +41,38 @@ export async function generateSlides(genAI, prompt, slideCount = 3) {
 }
 
 export async function generateImages(genAI, slides) {
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+  const openai = new OpenAI({
+    apiKey: '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'
+  });
 
   const slidesWithImages = [];
 
   for (const slide of slides.slides) {
-    const imagePrompt = `Crie uma imagem ilustrativa para um slide de apresentação com o título: "${slide.title}" e conteúdo: "${slide.content}". A imagem deve ser profissional e adequada para uma apresentação de negócios.`;
+    const imagePrompt = `Professional business presentation image for a slide titled "${slide.title}". Content: "${slide.content}". Create a clean, modern, corporate-style illustration suitable for business presentations. Use professional colors and layout.`;
 
     try {
-      const result = await model.generateContent(imagePrompt);
-      const response = await result.response;
+      console.log(`Gerando imagem com DALL-E para: ${slide.title}`);
+      
+      const response = await openai.images.generate({
+        model: "dall-e-3",
+        prompt: imagePrompt,
+        n: 1,
+        size: "1024x1024",
+        quality: "standard"
+      });
+
+      const imageUrl = response.data[0].url;
+      console.log(`Imagem gerada com sucesso: ${imageUrl}`);
 
       slidesWithImages.push({
         ...slide,
-        imageUrl: 'https://via.placeholder.com/800x600?text=' + encodeURIComponent(slide.title)
+        imageUrl: imageUrl
       });
     } catch (error) {
-      console.log('Erro ao gerar imagem, usando placeholder:', error.message);
+      console.log('Erro ao gerar imagem com DALL-E, usando placeholder:', error.message);
       slidesWithImages.push({
         ...slide,
-        imageUrl: 'https://via.placeholder.com/800x600?text=' + encodeURIComponent(slide.title)
+        imageUrl: 'https://via.placeholder.com/800x600/4A90E2/ffffff?text=' + encodeURIComponent(slide.title)
       });
     }
   }
@@ -68,9 +81,11 @@ export async function generateImages(genAI, slides) {
 }
 
 export async function generatePDF(slidesData) {
-  const browser = await puppeteer.launch({
+  // Detectar ambiente e configurar Puppeteer adequadamente
+  const isProduction = process.platform === 'linux';
+  
+  let puppeteerConfig = {
     headless: true,
-    executablePath: '/usr/bin/google-chrome',
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -87,7 +102,41 @@ export async function generatePDF(slidesData) {
       '--disable-features=TranslateUI',
       '--disable-ipc-flooding-protection'
     ]
-  });
+  };
+
+  // Em produção, tentar diferentes caminhos para o Chrome
+  if (isProduction) {
+    const possiblePaths = [
+      '/usr/bin/google-chrome',
+      '/usr/bin/google-chrome-stable',
+      '/usr/bin/chromium-browser',
+      '/usr/bin/chromium',
+      '/snap/bin/chromium'
+    ];
+
+    let chromeFound = false;
+    for (const chromePath of possiblePaths) {
+      try {
+        // Verificar se o executável existe
+        await fs.access(chromePath);
+        puppeteerConfig.executablePath = chromePath;
+        chromeFound = true;
+        console.log(`Chrome encontrado em: ${chromePath}`);
+        break;
+      } catch (error) {
+        // Continuar tentando próximo caminho
+        continue;
+      }
+    }
+
+    if (!chromeFound) {
+      console.log('Chrome não encontrado, usando Puppeteer padrão');
+      // Remover executablePath para usar o Chrome bundled do Puppeteer
+      delete puppeteerConfig.executablePath;
+    }
+  }
+
+  const browser = await puppeteer.launch(puppeteerConfig);
   const page = await browser.newPage();
 
   let htmlContent = `
@@ -155,14 +204,16 @@ export async function generatePDF(slidesData) {
   `;
 
   slidesData.slides.forEach((slide, index) => {
+    const imageElement = slide.imageUrl && !slide.imageUrl.includes('placeholder') 
+      ? `<img src="${slide.imageUrl}" alt="${slide.title}" style="width: 400px; height: 300px; object-fit: cover; border-radius: 12px; margin: 20px 0; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">`
+      : `<div class="image-placeholder">[Imagem: ${slide.title}]</div>`;
+
     htmlContent += `
       <div class="slide">
         <h1>${slide.title}</h1>
         <div class="slide-content">
           <div>
-            <div class="image-placeholder">
-              [Imagem: ${slide.title}]
-            </div>
+            ${imageElement}
             <p>${slide.content}</p>
           </div>
         </div>

@@ -8,7 +8,7 @@ import { generateSlides, generateImages, generatePDF } from './services.js';
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 3002;
+const port = process.env.PORT || 3003;
 
 app.use(cors());
 app.use(express.json());
@@ -16,7 +16,7 @@ app.use(express.json());
 // Servir arquivos PDF estaticamente
 app.use('/pdfs', express.static('/opt/generator'));
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const genAI = new GoogleGenerativeAI("AIzaSyDO0bmwQnYPev_23DCPNOySK7sFdz_kBsc");
 
 app.post('/generate-presentation', async (req, res) => {
   try {
