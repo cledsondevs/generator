@@ -204,9 +204,16 @@ export async function generatePDF(slidesData) {
   `;
 
   slidesData.slides.forEach((slide, index) => {
-    const imageElement = slide.imageUrl && !slide.imageUrl.includes('placeholder') 
-      ? `<img src="${slide.imageUrl}" alt="${slide.title}" style="width: 400px; height: 300px; object-fit: cover; border-radius: 12px; margin: 20px 0; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">`
-      : `<div class="image-placeholder">[Imagem: ${slide.title}]</div>`;
+    let imageElement = '';
+    
+    if (slide.imageUrl && !slide.imageUrl.includes('placeholder')) {
+      // Imagem real do DALL-E
+      imageElement = `<img src="${slide.imageUrl}" alt="${slide.title}" style="width: 400px; height: 300px; object-fit: cover; border-radius: 12px; margin: 20px 0; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">`;
+    } else if (slide.imageUrl && slide.imageUrl.includes('placeholder')) {
+      // Placeholder
+      imageElement = `<div class="image-placeholder">[Imagem: ${slide.title}]</div>`;
+    }
+    // Se não há imageUrl, não mostra nenhuma imagem
 
     htmlContent += `
       <div class="slide">
