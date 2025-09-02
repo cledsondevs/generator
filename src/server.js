@@ -3,7 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import os from 'os';
-import { generateSlides, generateImages, generatePDF } from './services.js';
+import { generateSlides, generateImages, generatePDF, generatePPT } from './services.js';
 import StackSpotClient from './stackspot.js';
 
 dotenv.config({ path: '../.env' });
@@ -31,7 +31,7 @@ const stackSpotClient = new StackSpotClient();
 
 app.post('/generate-presentation', async (req, res) => {
   try {
-    const { prompt, slideCount, generateImages: shouldGenerateImages, template, colors } = req.body;
+    const { prompt, slideCount, generateImages: shouldGenerateImages, template, colors, outputFormat } = req.body;
 
     if (!prompt) {
       return res.status(400).json({ error: 'Prompt é obrigatório' });
@@ -39,6 +39,7 @@ app.post('/generate-presentation', async (req, res) => {
 
     const numberOfSlides = slideCount || 3;
     const enableImages = shouldGenerateImages === undefined ? true : shouldGenerateImages;
+    const format = outputFormat || 'pdf';
 
     if (numberOfSlides < 1 || numberOfSlides > 10) {
       return res.status(400).json({ error: 'Número de slides deve ser entre 1 e 10' });
@@ -46,18 +47,25 @@ app.post('/generate-presentation', async (req, res) => {
 
     const slides = await generateSlides(stackSpotClient, prompt, numberOfSlides);
     const slidesData = enableImages ? await generateImages(slides) : slides;
-    const pdfPath = await generatePDF(slidesData, colors);
     
-    const fileName = path.basename(pdfPath);
+    let filePath;
+    if (format === 'ppt') {
+      filePath = await generatePPT(slidesData, colors);
+    } else {
+      filePath = await generatePDF(slidesData, colors);
+    }
+    
+    const fileName = path.basename(filePath);
     const publicUrl = `http://200.98.64.133:${port}/pdfs/${fileName}`;
 
     res.json({
-      message: 'Apresentação gerada com sucesso',
-      pdfPath,
+      message: `Apresentação ${format.toUpperCase()} gerada com sucesso`,
+      filePath,
       downloadUrl: publicUrl,
       slides: slidesData,
       slideCount: numberOfSlides,
-      imagesGenerated: enableImages
+      imagesGenerated: enableImages,
+      outputFormat: format.toUpperCase()
     });
 
   } catch (error) {

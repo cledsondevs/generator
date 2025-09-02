@@ -201,6 +201,14 @@
             </div>
             
             <div class="form-group">
+                <label for="outputFormat">Formato de Saída</label>
+                <select id="outputFormat" name="outputFormat">
+                    <option value="pdf">PDF</option>
+                    <option value="ppt">PowerPoint (PPT)</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
                 <div class="checkbox-group">
                     <input type="checkbox" id="generateImages" name="generateImages">
                     <label for="generateImages">Gerar imagens com IA</label>
@@ -295,7 +303,8 @@
                 slideCount: parseInt(formData.get('slideCount')),
                 generateImages: false,
                 template: selectedTemplate,
-                colors: colors
+                colors: colors,
+                outputFormat: formData.get('outputFormat')
             };
             
             try {
@@ -310,8 +319,10 @@
                 const responseData = await response.json();
                 
                 if (response.ok) {
-                    resultMessage.textContent = `Apresentação com ${responseData.slideCount} slides gerada com sucesso!`;
+                    const format = data.outputFormat.toUpperCase();
+                    resultMessage.textContent = `Apresentação ${format} com ${responseData.slideCount} slides gerada com sucesso!`;
                     downloadLink.href = responseData.downloadUrl;
+                    downloadLink.textContent = `📥 Baixar ${format}`;
                     result.style.display = 'block';
                 } else {
                     throw new Error(responseData.error || 'Erro desconhecido');
