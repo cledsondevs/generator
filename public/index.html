@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Apresentações</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 500px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 2rem;
+            font-size: 2rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #555;
+            font-weight: 500;
+        }
+        
+        input, textarea, select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e1e1e1;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+        }
+        
+        button {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 1rem;
+            color: #667eea;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .result {
+            display: none;
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: #f8f9ff;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .error {
+            display: none;
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: #ffe6e6;
+            border-radius: 8px;
+            border-left: 4px solid #ff4444;
+            color: #cc0000;
+        }
+        
+        .download-btn {
+            display: inline-block;
+            margin-top: 1rem;
+            padding: 0.75rem 1.5rem;
+            background: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+        
+        .download-btn:hover {
+            background: #218838;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <img src="/img/agent.svg" alt="Logo" style="height: 60px; margin-bottom: 1rem;">
+            <h1>Gerador de Apresentações StackSpot AI</h1>
+        </div>
+        
+        <form id="presentationForm">
+            <div class="form-group">
+                <label for="prompt">Tema da Apresentação</label>
+                <textarea 
+                    id="prompt" 
+                    name="prompt" 
+                    placeholder="Ex: Inteligência Artificial e Machine Learning no mundo moderno"
+                    required
+                ></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="slideCount">Número de Slides</label>
+                <select id="slideCount" name="slideCount">
+                    <option value="3">3 slides</option>
+                    <option value="4">4 slides</option>
+                    <option value="5">5 slides</option>
+                    <option value="6">6 slides</option>
+                    <option value="7">7 slides</option>
+                    <option value="8">8 slides</option>
+                    <option value="9">9 slides</option>
+                    <option value="10">10 slides</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="generateImages" name="generateImages">
+                    <label for="generateImages">Gerar imagens com IA</label>
+                </div>
+            </div>
+            
+            <button type="submit" id="generateBtn">
+                Gerar Apresentação
+            </button>
+        </form>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            Gerando sua apresentação...
+        </div>
+        
+        <div class="result" id="result">
+            <h3>✅ Apresentação gerada com sucesso!</h3>
+            <p id="resultMessage"></p>
+            <a href="#" id="downloadLink" class="download-btn" target="_blank">
+                📥 Baixar PDF
+            </a>
+        </div>
+        
+        <div class="error" id="error">
+            <h3>❌ Erro ao gerar apresentação</h3>
+            <p id="errorMessage"></p>
+        </div>
+    </div>
+    
+    <script>
+        const form = document.getElementById('presentationForm');
+        const generateBtn = document.getElementById('generateBtn');
+        const loading = document.getElementById('loading');
+        const result = document.getElementById('result');
+        const error = document.getElementById('error');
+        const resultMessage = document.getElementById('resultMessage');
+        const errorMessage = document.getElementById('errorMessage');
+        const downloadLink = document.getElementById('downloadLink');
+        
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Reset states
+            result.style.display = 'none';
+            error.style.display = 'none';
+            loading.style.display = 'block';
+            generateBtn.disabled = true;
+            
+            const formData = new FormData(form);
+            const data = {
+                prompt: formData.get('prompt'),
+                slideCount: parseInt(formData.get('slideCount')),
+                generateImages: false
+            };
+            
+            try {
+                const response = await fetch('/generate-presentation', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const responseData = await response.json();
+                
+                if (response.ok) {
+                    resultMessage.textContent = `Apresentação com ${responseData.slideCount} slides gerada com sucesso!`;
+                    downloadLink.href = responseData.downloadUrl;
+                    result.style.display = 'block';
+                } else {
+                    throw new Error(responseData.error || 'Erro desconhecido');
+                }
+                
+            } catch (err) {
+                errorMessage.textContent = err.message;
+                error.style.display = 'block';
+            } finally {
+                loading.style.display = 'none';
+                generateBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

@@ -76,3 +76,13 @@ PORT=3003
 O servidor serve PDFs estaticamente em `/pdfs/`
 
 Exemplo: `http://seu-servidor:3003/pdfs/apresentacao-123456.pdf`
+
+ curl -X POST
+  http://localhost:3003/generate-presentation \
+    -H "Content-Type: application/json" \
+    -d '{
+      "prompt": "Inteligência Artificial e
+  Machine Learning",
+      "slideCount": 5,
+      "generateImages": true
+    }'

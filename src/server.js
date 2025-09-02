@@ -24,6 +24,9 @@ app.use(express.json());
 const pdfDir = process.platform === 'linux' ? '/opt/generator' : os.homedir();
 app.use('/pdfs', express.static(pdfDir));
 
+// Servir arquivos estáticos do frontend
+app.use('/', express.static('../public'));
+
 const stackSpotClient = new StackSpotClient();
 
 app.post('/generate-presentation', async (req, res) => {
