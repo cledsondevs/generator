@@ -296,7 +296,8 @@
             
             const formData = new FormData(form);
             const selectedTemplate = formData.get('template');
-            const colors = templateColors[selectedTemplate];
+            const templateInfo = templateData[selectedTemplate];
+            const colors = templateInfo ? templateInfo.colors : {};
             
             const data = {
                 prompt: formData.get('prompt'),
