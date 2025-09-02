@@ -15,7 +15,7 @@ console.log('STACKSPOT_REALM:', process.env.STACKSPOT_REALM);
 console.log('OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? '✅' : '❌');
 
 const app = express();
-const port = process.env.PORT || 3003;
+const port = process.env.PORT || 3002;
 
 app.use(cors());
 app.use(express.json());
@@ -49,7 +49,7 @@ app.post('/generate-presentation', async (req, res) => {
     const pdfPath = await generatePDF(slidesData);
     
     const fileName = path.basename(pdfPath);
-    const publicUrl = `http://localhost:${port}/pdfs/${fileName}`;
+    const publicUrl = `http://200.98.64.133:${port}/pdfs/${fileName}`;
 
     res.json({
       message: 'Apresentação gerada com sucesso',
