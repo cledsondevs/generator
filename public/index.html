@@ -191,6 +191,16 @@
             </div>
             
             <div class="form-group">
+                <label for="template">Template de Identidade Visual</label>
+                <select id="template" name="template">
+                    <option value="ion-itau">ION ITAU</option>
+                    <option value="nttdata">NTTDATA</option>
+                    <option value="zup">ZUP</option>
+                    <option value="itau-pf">ITAU PF</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
                 <div class="checkbox-group">
                     <input type="checkbox" id="generateImages" name="generateImages">
                     <label for="generateImages">Gerar imagens com IA</label>
@@ -231,6 +241,42 @@
         const errorMessage = document.getElementById('errorMessage');
         const downloadLink = document.getElementById('downloadLink');
         
+        // Mapeamento de cores e logos por template
+        const templateData = {
+            'ion-itau': {
+                colors: {
+                    primary: '#FFF20A',
+                    secondary: '#005183',
+                    accent: '#FFF20A'
+                },
+                logo: '/img/logos/ion.png'
+            },
+            'nttdata': {
+                colors: {
+                    primary: '#0072BB',
+                    secondary: '#BAD2EE',
+                    accent: '#070F26'
+                },
+                logo: '/img/logos/nttdata.png'
+            },
+            'zup': {
+                colors: {
+                    primary: '#FF6200',
+                    secondary: '#FF6200',
+                    accent: '#FF6200'
+                },
+                logo: '/img/logos/zup.png'
+            },
+            'itau-pf': {
+                colors: {
+                    primary: '#FF6200',
+                    secondary: '#003087',
+                    accent: '#FF6200'
+                },
+                logo: '/img/logos/itau.png'
+            }
+        };
+        
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -241,10 +287,15 @@
             generateBtn.disabled = true;
             
             const formData = new FormData(form);
+            const selectedTemplate = formData.get('template');
+            const colors = templateColors[selectedTemplate];
+            
             const data = {
                 prompt: formData.get('prompt'),
                 slideCount: parseInt(formData.get('slideCount')),
-                generateImages: false
+                generateImages: false,
+                template: selectedTemplate,
+                colors: colors
             };
             
             try {

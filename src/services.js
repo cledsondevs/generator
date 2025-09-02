@@ -77,9 +77,18 @@ export async function generateImages(slides) {
   return { slides: slidesWithImages };
 }
 
-export async function generatePDF(slidesData) {
+export async function generatePDF(slidesData, colors = {}) {
   console.log('📄 Gerando PDF da apresentação...');
   const isProduction = process.platform === 'linux';
+  
+  // Cores padrão caso não sejam fornecidas
+  const defaultColors = {
+    primary: '#007acc',
+    secondary: '#333',
+    accent: '#007acc'
+  };
+  
+  const templateColors = { ...defaultColors, ...colors };
   
   const puppeteerConfig = {
     headless: true,
@@ -135,11 +144,11 @@ export async function generatePDF(slidesData) {
           page-break-after: avoid;
         }
         .slide h1 {
-          color: #333;
+          color: ${templateColors.secondary};
           font-size: 36px;
           margin-bottom: 30px;
           text-align: center;
-          border-bottom: 3px solid #007acc;
+          border-bottom: 3px solid ${templateColors.primary};
           padding-bottom: 15px;
         }
         .slide-content {
@@ -158,14 +167,14 @@ export async function generatePDF(slidesData) {
         .image-placeholder {
           width: 100%;
           height: 200px;
-          background: linear-gradient(45deg, #e3f2fd, #bbdefb);
-          border: 2px dashed #2196f3;
+          background: linear-gradient(45deg, ${templateColors.primary}20, ${templateColors.secondary}20);
+          border: 2px dashed ${templateColors.primary};
           display: flex;
           align-items: center;
           justify-content: center;
           margin: 20px 0;
           font-size: 14px;
-          color: #666;
+          color: ${templateColors.secondary};
           border-radius: 8px;
         }
       </style>

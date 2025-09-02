@@ -31,7 +31,7 @@ const stackSpotClient = new StackSpotClient();
 
 app.post('/generate-presentation', async (req, res) => {
   try {
-    const { prompt, slideCount, generateImages: shouldGenerateImages } = req.body;
+    const { prompt, slideCount, generateImages: shouldGenerateImages, template, colors } = req.body;
 
     if (!prompt) {
       return res.status(400).json({ error: 'Prompt é obrigatório' });
@@ -46,7 +46,7 @@ app.post('/generate-presentation', async (req, res) => {
 
     const slides = await generateSlides(stackSpotClient, prompt, numberOfSlides);
     const slidesData = enableImages ? await generateImages(slides) : slides;
-    const pdfPath = await generatePDF(slidesData);
+    const pdfPath = await generatePDF(slidesData, colors);
     
     const fileName = path.basename(pdfPath);
     const publicUrl = `http://200.98.64.133:${port}/pdfs/${fileName}`;
