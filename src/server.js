@@ -2,10 +2,11 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import os from 'os';
 import { generateSlides, generateImages, generatePDF } from './services.js';
+import StackSpotClient from './stackspot.js';
 
-dotenv.config();
+dotenv.config({ path: '../../.env' });
 
 const app = express();
 const port = process.env.PORT || 3003;
@@ -14,9 +15,10 @@ app.use(cors());
 app.use(express.json());
 
 // Servir arquivos PDF estaticamente
-app.use('/pdfs', express.static('/opt/generator'));
+const pdfDir = process.platform === 'linux' ? '/opt/generator' : os.homedir();
+app.use('/pdfs', express.static(pdfDir));
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const stackSpotClient = new StackSpotClient();
 
 app.post('/generate-presentation', async (req, res) => {
   try {
@@ -29,49 +31,25 @@ app.post('/generate-presentation', async (req, res) => {
     const numberOfSlides = slideCount || 3;
     const enableImages = shouldGenerateImages === undefined ? true : shouldGenerateImages;
 
-    console.log(`generateImages recebido: ${shouldGenerateImages}`);
-    console.log(`enableImages calculado: ${enableImages}`);
-
     if (numberOfSlides < 1 || numberOfSlides > 10) {
       return res.status(400).json({ error: 'Número de slides deve ser entre 1 e 10' });
     }
 
-    const slides = await generateSlides(genAI, prompt, numberOfSlides);
+    const slides = await generateSlides(stackSpotClient, prompt, numberOfSlides);
+    const slidesData = enableImages ? await generateImages(slides) : slides;
+    const pdfPath = await generatePDF(slidesData);
     
-    if (enableImages) {
-      console.log('Gerando imagens...');
-      const slidesWithImages = await generateImages(genAI, slides);
-      const pdfPath = await generatePDF(slidesWithImages);
-      
-      // Extrair apenas o nome do arquivo para criar URL pública
-      const fileName = path.basename(pdfPath);
-      const publicUrl = `http://200.98.64.133:${port}/pdfs/${fileName}`;
+    const fileName = path.basename(pdfPath);
+    const publicUrl = `http://localhost:${port}/pdfs/${fileName}`;
 
-      res.json({
-        message: 'Apresentação gerada com sucesso',
-        pdfPath,
-        downloadUrl: publicUrl,
-        slides: slidesWithImages,
-        slideCount: numberOfSlides,
-        imagesGenerated: true
-      });
-    } else {
-      console.log('Pulando geração de imagens...');
-      const pdfPath = await generatePDF(slides);
-      
-      // Extrair apenas o nome do arquivo para criar URL pública
-      const fileName = path.basename(pdfPath);
-      const publicUrl = `http://200.98.64.133:${port}/pdfs/${fileName}`;
-
-      res.json({
-        message: 'Apresentação gerada com sucesso',
-        pdfPath,
-        downloadUrl: publicUrl,
-        slides: slides,
-        slideCount: numberOfSlides,
-        imagesGenerated: false
-      });
-    }
+    res.json({
+      message: 'Apresentação gerada com sucesso',
+      pdfPath,
+      downloadUrl: publicUrl,
+      slides: slidesData,
+      slideCount: numberOfSlides,
+      imagesGenerated: enableImages
+    });
 
   } catch (error) {
     console.error('Erro ao gerar apresentação:', error);

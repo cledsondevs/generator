@@ -3,56 +3,52 @@ import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
 import OpenAI from 'openai';
+import StackSpotClient from './stackspot.js';
 
-export async function generateSlides(genAI, prompt, slideCount = 3) {
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
+export async function generateSlides(stackSpotClient, prompt, slideCount = 3) {
   const slidePrompt = `
-    Baseado no prompt: "${prompt}"
-    
-    Gere exatamente ${slideCount} slides para uma apresentação. Retorne apenas um JSON válido no formato:
+Baseado no prompt: "${prompt}"
+
+Gere exatamente ${slideCount} slides para uma apresentação. Retorne apenas um JSON válido no formato:
+{
+  "slides": [
+    ${Array.from({ length: slideCount }, (_, i) => `
     {
-      "slides": [
-        ${Array.from({ length: slideCount }, (_, i) => `
-        {
-          "title": "Título do Slide ${i + 1}",
-          "content": "Conteúdo detalhado do slide ${i + 1}"
-        }`).join(',')}
-      ]
-    }
-    
-    Importante: 
-    - Responda apenas com o JSON, sem texto adicional
-    - Gere exatamente ${slideCount} slides
-    - Cada slide deve ter conteúdo único e relevante
-    - O conteúdo deve ser detalhado e informativo
+      "title": "Título do Slide ${i + 1}",
+      "content": "Conteúdo detalhado do slide ${i + 1}"
+    }`).join(',')}
+  ]
+}
+
+Importante: 
+- Responda apenas com o JSON, sem texto adicional
+- Gere exatamente ${slideCount} slides
+- Cada slide deve ter conteúdo único e relevante
+- O conteúdo deve ser detalhado e informativo
   `;
 
-  const result = await model.generateContent(slidePrompt);
-  const response = await result.response;
-  const text = response.text();
+  const response = await stackSpotClient.chat(slidePrompt);
+  
+  // StackSpot retorna no formato { message: "JSON_string", ... }
+  let text = response.message || response.response || response;
 
   try {
-    return JSON.parse(text);
+    const parsed = JSON.parse(text);
+    return parsed;
   } catch (error) {
-    const cleanedText = text.replace(/```json\n?|\n?```/g, '').trim();
+    const cleanedText = String(text).replace(/```json\n?|\n?```/g, '').trim();
     return JSON.parse(cleanedText);
   }
 }
 
-export async function generateImages(genAI, slides) {
-  const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
-  });
-
+export async function generateImages(slides) {
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const slidesWithImages = [];
 
   for (const slide of slides.slides) {
-    const imagePrompt = `Professional business presentation image for a slide titled "${slide.title}". Content: "${slide.content}". Create a clean, modern, corporate-style illustration suitable for business presentations. Use professional colors and layout.`;
+    const imagePrompt = `Professional business presentation image for "${slide.title}". Clean, modern, corporate style illustration suitable for business presentations.`;
 
     try {
-      console.log(`Gerando imagem com DALL-E para: ${slide.title}`);
-      
       const response = await openai.images.generate({
         model: "dall-e-3",
         prompt: imagePrompt,
@@ -61,18 +57,14 @@ export async function generateImages(genAI, slides) {
         quality: "standard"
       });
 
-      const imageUrl = response.data[0].url;
-      console.log(`Imagem gerada com sucesso: ${imageUrl}`);
-
       slidesWithImages.push({
         ...slide,
-        imageUrl: imageUrl
+        imageUrl: response.data[0].url
       });
     } catch (error) {
-      console.log('Erro ao gerar imagem com DALL-E, usando placeholder:', error.message);
       slidesWithImages.push({
         ...slide,
-        imageUrl: 'https://via.placeholder.com/800x600/4A90E2/ffffff?text=' + encodeURIComponent(slide.title)
+        imageUrl: `https://via.placeholder.com/800x600/4A90E2/ffffff?text=${encodeURIComponent(slide.title)}`
       });
     }
   }
@@ -81,65 +73,37 @@ export async function generateImages(genAI, slides) {
 }
 
 export async function generatePDF(slidesData) {
-  // Detectar ambiente e configurar Puppeteer adequadamente
   const isProduction = process.platform === 'linux';
   
-  let puppeteerConfig = {
+  const puppeteerConfig = {
     headless: true,
     args: [
       '--no-sandbox',
-      '--disable-setuid-sandbox',
+      '--disable-setuid-sandbox', 
       '--disable-dev-shm-usage',
-      '--disable-accelerated-2d-canvas',
-      '--no-first-run',
-      '--no-zygote',
-      '--single-process',
-      '--disable-gpu',
-      '--disable-background-timer-throttling',
-      '--disable-backgrounding-occluded-windows',
-      '--disable-renderer-backgrounding',
-      '--disable-web-security',
-      '--disable-features=TranslateUI',
-      '--disable-ipc-flooding-protection'
+      '--disable-gpu'
     ]
   };
 
-  // Em produção, tentar diferentes caminhos para o Chrome
   if (isProduction) {
-    const possiblePaths = [
-      '/usr/bin/google-chrome',
-      '/usr/bin/google-chrome-stable',
-      '/usr/bin/chromium-browser',
-      '/usr/bin/chromium',
-      '/snap/bin/chromium'
-    ];
-
-    let chromeFound = false;
-    for (const chromePath of possiblePaths) {
+    const chromePaths = ['/usr/bin/chromium-browser', '/usr/bin/google-chrome'];
+    
+    for (const chromePath of chromePaths) {
       try {
-        // Verificar se o executável existe
         await fs.access(chromePath);
         puppeteerConfig.executablePath = chromePath;
-        chromeFound = true;
-        console.log(`Chrome encontrado em: ${chromePath}`);
         break;
       } catch (error) {
-        // Continuar tentando próximo caminho
         continue;
       }
-    }
-
-    if (!chromeFound) {
-      console.log('Chrome não encontrado, usando Puppeteer padrão');
-      // Remover executablePath para usar o Chrome bundled do Puppeteer
-      delete puppeteerConfig.executablePath;
     }
   }
 
   const browser = await puppeteer.launch(puppeteerConfig);
   const page = await browser.newPage();
-
-  let htmlContent = `
+  
+  try {
+    let htmlContent = `
     <!DOCTYPE html>
     <html>
     <head>
@@ -233,20 +197,26 @@ export async function generatePDF(slidesData) {
     </html>
   `;
 
-  await page.setContent(htmlContent);
+  await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+  await new Promise(resolve => setTimeout(resolve, 1000));
 
-  const userDir = "/opt/generator/";
+  const userDir = process.platform === 'linux' ? '/opt/generator' : os.homedir();
   const fileName = `apresentacao-${Date.now()}.pdf`;
   const pdfPath = path.join(userDir, fileName);
 
-  await page.pdf({
-    path: pdfPath,
-    format: 'A4',
-    landscape: true,
-    printBackground: true,
-    margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' }
-  });
+    await page.pdf({
+      path: pdfPath,
+      format: 'A4',
+      landscape: true,
+      printBackground: true,
+      margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' }
+    });
 
-  await browser.close();
-  return pdfPath;
+    return pdfPath;
+  } catch (error) {
+    console.error('Erro ao gerar PDF:', error);
+    throw error;
+  } finally {
+    await browser.close();
+  }
 }
