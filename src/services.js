@@ -6,6 +6,8 @@ import OpenAI from 'openai';
 import StackSpotClient from './stackspot.js';
 
 export async function generateSlides(stackSpotClient, prompt, slideCount = 3) {
+  console.log(`🎯 Gerando ${slideCount} slides para o prompt: "${prompt}"`);
+  
   const slidePrompt = `
 Baseado no prompt: "${prompt}"
 
@@ -27,7 +29,9 @@ Importante:
 - O conteúdo deve ser detalhado e informativo
   `;
 
+  console.log('📡 Enviando prompt para StackSpot...');
   const response = await stackSpotClient.chat(slidePrompt);
+  console.log('✅ Resposta recebida do StackSpot');
   
   // StackSpot retorna no formato { message: "JSON_string", ... }
   let text = response.message || response.response || response;
@@ -42,6 +46,7 @@ Importante:
 }
 
 export async function generateImages(slides) {
+  console.log(`🖼️  Gerando imagens para ${slides.slides.length} slides...`);
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const slidesWithImages = [];
 
@@ -73,6 +78,7 @@ export async function generateImages(slides) {
 }
 
 export async function generatePDF(slidesData) {
+  console.log('📄 Gerando PDF da apresentação...');
   const isProduction = process.platform === 'linux';
   
   const puppeteerConfig = {

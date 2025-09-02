@@ -6,7 +6,13 @@ import os from 'os';
 import { generateSlides, generateImages, generatePDF } from './services.js';
 import StackSpotClient from './stackspot.js';
 
-dotenv.config({ path: '../../.env' });
+dotenv.config({ path: '../.env' });
+
+// Debug das variáveis de ambiente
+console.log('🔧 Variáveis de ambiente carregadas:');
+console.log('STACKSPOT_CLIENT_ID:', process.env.STACKSPOT_CLIENT_ID ? '✅' : '❌');
+console.log('STACKSPOT_REALM:', process.env.STACKSPOT_REALM);
+console.log('OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? '✅' : '❌');
 
 const app = express();
 const port = process.env.PORT || 3003;
